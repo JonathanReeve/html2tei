@@ -14,7 +14,9 @@ import Text.HandsomeSoup
 data Novel =  Novel { title :: String,
                       chaps :: [Chapter] } deriving Show
 
-data Chapter = Chapter [Para] deriving Show
+data Chapter = Chapter { paras  :: [Para]
+                       , aname  :: String
+                       } deriving Show
 
 data Para = Para String deriving Show
 
