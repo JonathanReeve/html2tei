@@ -57,7 +57,9 @@ executable html2tei
   -- other-extensions:
 
   -- Other library packages from which modules are imported.
-  build-depends:       base >=4.12 && <4.13
+  build-depends:       base >=4.12 && <4.13,
+                       HandsomeSoup,
+		       hxt
 
   -- Directories containing source files.
   hs-source-dirs:      src
