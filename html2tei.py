@@ -69,17 +69,25 @@ class Para():
     def __init__(self, para):
         self.markup = para
         self.text = self.markup.getText()
-        # No line breaks in this one, for regex, etc.
 
     def __len__(self):
         return len(self.text.split())
 
     def __repr__(self):
         out = "{}w ".format(len(self))
-        out += "Text: {}".format(self.text)
+        out += "Text: {}\n".format(self.text)
         out += "Cleaned: {}\n".format(self.cleanText)
-        out += "Quot: {}".format(self.quotations)
+        out += "Quot: {}\n".format(self.quotations)
+        out += "Percent quoted: {}\n".format(self.percentQuoted)
         return out
+
+    @property
+    def percentQuoted(self):
+        """ How much of this paragraph is dialogue? (quotation) """
+        if self.quotations:
+            return len(self.quotations) / len(self)
+        else:
+            return 0
 
     @property
     def cleanText(self):
@@ -92,33 +100,37 @@ class Para():
         """
         Extract quotations from paragraphs
         TODO: Handle straight quotes
-        TODO: Refactor this
         """
-        quotData = {  # Case: "But you forget, mamma," said Elizabeth,
-                      # "that we shall meet him at the assemblies!"
+        quotData = {
+            # Case: "But you forget, mamma," said Elizabeth,
+            # "that we shall meet him at the assemblies!"
                     'interrupted': {'pattern': r'(“.*?[,!?]”)(.*?)(“.*?”)',
                                     'quotedGroups': [1, 3],
                                     'betweenGroup': 2
-                                    },
-                    # Sometimes the final quotation mark at the end of a paragraph
-                    # Is omitted. 
-                    'paragraph':   {'pattern': '(“.*?$)',
+                    },
+            # Sometimes the final quotation mark at the end of a paragraph
+            # Is omitted.
+                    'paragraph':   {'pattern': '(^“.*?[”$])',
                                     'quotedGroups':  [0],
                                     'betweenGroup': ''
-                                    },
-                    'normal':       {'pattern': r'(“.*?”)',
-                                     'quotedGroups': [0],
-                                     'betweenGroup': ''
-                                     }
+                    },
+                    'normal':       {'pattern': r'“.*?”',
+                                    'quotedGroups': [0],
+                                    'betweenGroup': ''
                     }
+        }
 
         for quotType, data in quotData.items():
-            matches = re.finditer(data['pattern'], self.cleanText, re.UNICODE)
-            if matches is not None and matches is not []:
-                return [Quotation(quotType,
-                                  quoted=[match.group(n) for n in data['quotedGroups']],
-                                  between=match.group(data['betweenGroup']))
-                        for match in matches]
+            matches = list(re.finditer(data['pattern'], self.cleanText, re.UNICODE))
+            if matches:
+                print('matches!', matches)
+                for match in matches:
+                    quoted = [match.group(n) for n in data['quotedGroups']]
+                    if data['betweenGroup']:
+                        between = match.group(data['betweenGroup'])
+                    else:
+                        between = ""
+                    return Quotation(quotType, quoted, between)
 
 
 class Quotation():
@@ -128,9 +140,14 @@ class Quotation():
         # said Elizabeth
         self.between = between
         self.quoted = quoted
+
     def __repr__(self):
         return "Type: {}, between: {}, quoted: {}".format(
             self.quotType, self.between, self.quoted)
+
+    def __len__(self):
+        """ Get length in number of words. """
+        return len(' '.join(self.quoted).split())
 
 def testRandomParagraph(fn): 
     with open(fn) as f:
