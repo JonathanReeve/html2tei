@@ -131,7 +131,43 @@ class Para():
                     else:
                         between = ""
                     return Quotation(quotType, quoted, between)
+    
+def getBetween(self):
+    """
+    Extract quotations from paragraphs
+    TODO: Handle straight quotes
+    """
+    quotData = {
+        # Case: "But you forget, mamma," said Elizabeth,
+        # "that we shall meet him at the assemblies!"
+                'interrupted': {'pattern': r'(“.*?[,!?]”)(.*?)(“.*?”)',
+                                'quotedGroups': [1, 3],
+                                'betweenGroup': 2
+                },
+        # Sometimes the final quotation mark at the end of a paragraph
+        # Is omitted.
+                'paragraph':   {'pattern': '(^“.*?[”$])',
+                                'quotedGroups':  [0],
+                                'betweenGroup': ''
+                },
+                'normal':       {'pattern': r'“.*?”',
+                                'quotedGroups': [0],
+                                'betweenGroup': ''
+                }
+    }
 
+    for quotType, data in quotData.items():
+        matches = list(re.finditer(data['pattern'], self.cleanText, re.UNICODE))
+        if matches:
+            for match in matches:
+                quoted = [match.group(n) for n in data['quotedGroups']]
+                if data['betweenGroup']:
+                    between = match.group(data['betweenGroup'])
+                else:
+                    between = ""
+                q = Quotation(quotType, quoted, between)
+                return q.getBetween()
+    return ""
 
 class Quotation():
     def __init__(self, quotType, quoted, between=""):
@@ -148,9 +184,12 @@ class Quotation():
     def __len__(self):
         """ Get length in number of words. """
         return len(' '.join(self.quoted).split())
+    
+    def getBetween(self):
+        return self.between
 
 def testRandomParagraph(fn): 
-    with open(fn) as f:
+    with open(fn, encoding = "utf-8") as f:
         rawText = f.read()
         bookObj = Book(rawText)
         randomChap = bookObj.chapters[choice(range(0,bookObj.nChapters))]
@@ -158,4 +197,67 @@ def testRandomParagraph(fn):
     print(randomPara)
     return 
 
-print(testRandomParagraph('1342-h.htm'))
+def findAllBetween(fn):
+    allbetween = []
+    with open(fn, encoding = "utf-8") as f:
+        rawText = f.read()
+        bookObj = Book(rawText)
+        for i in range(0,bookObj.nChapters):
+            chap = bookObj.chapters[i]
+            for j in range(0,chap.nParas):
+                para = chap.paras[j]
+                if para.getBetween().strip():
+                    allbetween.append(para.getBetween().strip())
+    # Write all betweens into the file "AllBetweens.txt"
+    with open('AllBetweens.txt', 'w') as fw:
+        for between in allbetween:
+            fw.write('%s\n' % between)
+    return allbetween
+
+def findAllSpeaker(fn):
+    verbs = ["said", "cried", "returned", "replied", "observed", "continued", "thought", "repeated", "added", "answered"]
+    pronoun = ["he", "she"]
+    title = ["Mr.", "Mrs.", "Miss", "Sir"]
+    person = set()
+    speaker = []
+    with open(fn) as fn:
+        lines = fn.read().split("\n")
+        for line in lines:
+
+            # Delete ending punctuation
+            if line[-1:] in ",.;—:":
+                line = line[:-1]
+            # Set speaker
+            speaker_line = ''
+            
+            line_split = line.split()
+            
+            for i in range(len(line_split)):
+                if line_split[i] in verbs:
+                    if i+1 < len(line_split): 
+                        # said he
+                        if line_split[i+1] in pronoun:
+                            speaker_line = line_split[i+1]
+                        # said Mr. Collins
+                        elif line_split[i+1] in title:
+                            speaker_line = line_split[i+1] + " " + line_split[i+2]
+                            person.add(speaker_line)
+                        # said Elizabeth, said Colonel Fitzwilliam
+                        elif line_split[i+1][:1].isupper():
+                            if i+2 < len(line_split):
+                                if line_split[i+2][:1].isupper():
+                                    speaker_line = line_split[i+1] + " " + line_split[i+2]
+                                    person.add(speaker_line)
+                            else:
+                                speaker_line = line_split[i+1]
+                                person.add(speaker_line)
+            if not speaker_line:
+                speaker_line = line
+            speaker.append(speaker_line)
+    return speaker, person
+#print(testRandomParagraph('1342-h.htm'))
+#print(findAllBetween('1342-h.htm'))
+    
+speaker, person = findAllSpeaker('AllBetweens.txt')
+print(speaker)
+print(person)
