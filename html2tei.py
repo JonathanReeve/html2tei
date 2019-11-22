@@ -139,7 +139,7 @@ class Quotation():
         # said Elizabeth
         self.between = between
         self.quoted = quoted
-        self.speaker, self.person = self.getSpeaker(between)
+        self.speaker, self.person, self.verb = self.getSpeaker(between)
 
     def __repr__(self):
         out = f"Type: {self.quotType}, between: {self.between}, quoted: {self.quoted}\n"
@@ -149,6 +149,19 @@ class Quotation():
     def __len__(self):
         """ Get length in number of words. """
         return len(' '.join(self.quoted).split())
+
+    def _removeTrailingPunctuation(self, text):
+        """
+        Takes a string, and returns that string without any
+        trailing punctuation.
+        """
+
+        # Delete ending punctuation
+        text = text.strip()
+
+        if text[-1:] in ",.;:-":
+            text = text[:-1]
+        return text
 
     def getSpeaker(self, between):
         """
@@ -165,11 +178,8 @@ class Quotation():
         person = set()
         speaker = []
 
-        line = between
+        line = self._removeTrailingPunctuation(between)
 
-        # Delete ending punctuation
-        if line[-1:] in ",.;:-":
-            line = line[:-1]
         # Set speaker
         speaker_line = ''
 
@@ -198,7 +208,10 @@ class Quotation():
             speaker_line = line
         speaker.append(speaker_line)
 
-        return speaker, person
+        # FIXME
+        verb = ""
+
+        return speaker, person, verb
 
 
 def testRandomParagraph(fn):
