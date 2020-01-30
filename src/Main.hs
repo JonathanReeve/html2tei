@@ -1,36 +1,63 @@
+{-# LANGUAGE OverloadedStrings #-}
 
--- -*- dante-command-line: '("nix-shell" "--run" "ghci"); -*-
+import Text.Pandoc
+import Text.Pandoc.Walk (walk)
+import TEI
 
-module Main where
+import Text.Parsec
+import Text.Parsec.Text (Parser)
+import Text.Numeral.Roman
+import qualified Data.Text as T
+import qualified Data.Text.IO as TIO
 
-import Text.XML.HXT.Core
-import Text.HandsomeSoup
+transform :: Pandoc -> Pandoc
+transform doc = markChapter doc -- markChapter doc
 
--- Pride and Prejudice: https://www.gutenberg.org/files/1342/1342-h/1342-h.htm
--- Dracula: https://www.gutenberg.org/files/345/345-h/345-h.htm
+-- -- Example from here: https://pandoc.org/using-the-pandoc-api.html#walking-the-ast
+markChapter :: Pandoc -> Pandoc
+markChapter = walk mark
+  where mark :: Block -> Block
+        mark (Header lev attr inlines) =
+          if (isChapter (head inlines))
+          then
+            Header lev (stainAttr attr) inlines
+          else
+            Header lev attr inlines
+        mark x = x
+        stainAttr (htmlClass, secondThing, attrDict) = (htmlClass, secondThing, [("chapter", "true")])
 
--- Handle <a name="#link2HCH0017"> where CH0017 stands for Chapter 17
+arabicNum :: Parser Int
+arabicNum = do
+  n <- many1 digit
+  return (read n)
 
-data Novel =  Novel { title :: String,
-                      chaps :: [Chapter] } deriving Show
+isChapter :: Inline -> Bool
+isChapter str = str == Str "CHAPTER"
 
-data Chapter = Chapter [Para] deriving Show
+chapterWords :: Parser String
+chapterWords = (string "Chapter") <|> (string "CHAPTER")
 
-data Para = Para String deriving Show
+number :: Parser Int
+number = arabicNum <|> romanNum
 
--- >>> main
--- Chapter [Para "Contents of chapter 2, para 1",Para "Contents of chapter 2, para 2",Para "Contents of chapter 2, para 3",Para "Contents of chapter 2, para 4",Para "Contents of chapter 3, para 1",Para "Contents of chapter 3, para 2",Para "Contents of chapter 3, para 3",Para "Contents of chapter 3, para 4"]
+romanNum :: Parser Int
+romanNum = do
+  str <- many1 anyChar
+  case fromRoman str of
+    Just n -> return n
+    Nothing -> fail $ str ++ " is not a valid roman numeral"
+
+regularParse :: Parser a -> T.Text -> Either ParseError a
+regularParse p = parse p ""
+
+
 main :: IO ()
 main = do
-  contents <- readFile "src/test.html"
-  let doc = parseHtml contents
-  -- Get all divs that have the child <a name="">
-  let chapsRaw = doc >>> css "div" >>> (ifA (css "a" >>> hasAttr "name")(this)(none))
-  chaps <- runX chapsRaw
-  names <- runX $ chapsRaw >>> css "a" ! "name"
-  -- print $ names
-  -- print chaps
-  -- Gets text of all paragraphs
-  paraText <- runX $ chapsRaw >>> css "p" /> getText
-  let chap = Chapter [Para text | text <- paraText]
-  print chap
+  -- Read stdin
+  input <- TIO.getContents
+  result <- runIO $ do
+    doc <- readHtml def input
+    TEI.writeTEI def (transform doc)
+  rst <- handleError result
+  -- Write stdout
+  TIO.putStrLn rst
