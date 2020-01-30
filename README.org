@@ -1,0 +1,35 @@
+* HTML2TEI
+
+This is a tool to convert Project Gutenberg HTML files into [[http://teibyexample.org/modules/TBED00v00.htm][TEI XML]] files. It works best on English-language novels. Another way to think of this is as a novel parser: it tries to infer knowledge about a novel, and render that knowledge in a machine-readable format.
+ 
+Since it uses Pandoc as its backend, it is similar to running ~pandoc -o gut-novel.tei.xml gut-novel.html~, but it adds a few extra semantic tags, such as:
+
+ - [X] real chapter divisions (~<div type="chapter" n=3>~ in TEI)
+ - [ ] ~<said who="">~ tags for dialogue and quotations
+ - [ ] metadata, gathered from Project Gutenberg
+ - [ ] extra metadata, gathered from Wikidata and other sources
+ - [ ] passages of foreign languages
+
+(Checked boxes are completed features, unchecked ones are planned.)
+
+This allows you to select semantic units of a novel, using `XPath` or equivalent. For example, to get the chapters of a novel: 
+
+~xmllint --xpath '//div[@type="chapter"]' file.xml~
+
+This means that you can use this as a replacement for [[https://github.com/JonathanReeve/chapterize][chapterize]], at least for those texts that have an HTML version.
+
+To get all the lines of dialogue spoken by Leopold Bloom,
+
+~xmllint --xpath '//said[@who="Leopold Bloom"]' file.xml~
+
+** Usage 
+
+This tool accepts standard input, and writes to standard output, for now.
+
+Ensure that you have the [[https://nixos.org/nix/][Nix package manager]] installed, then, in the project directory:
+
+#+BEGIN_SRC shell
+nix-shell 
+cat src/test-data/4300-h.htm | src/Main.hs 
+#+END_SRC
+
