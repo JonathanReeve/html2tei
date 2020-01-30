@@ -2,13 +2,14 @@
 
 import Text.Pandoc
 import Text.Pandoc.Walk (walk)
-import TEI
 
 import Text.Parsec
 import Text.Parsec.Text (Parser)
 import Text.Numeral.Roman
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
+
+import TEI -- my local modification of the Pandoc TEI writer
 
 transform :: Pandoc -> Pandoc
 transform doc = markChapter doc -- markChapter doc

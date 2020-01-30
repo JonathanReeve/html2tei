@@ -30,6 +30,7 @@ Ensure that you have the [[https://nixos.org/nix/][Nix package manager]] install
 
 #+BEGIN_SRC shell
 nix-shell 
-cat src/test-data/4300-h.htm | src/Main.hs 
+cd src
+cat test-data/4300-h.htm | runhaskell Main.hs 
 #+END_SRC
 
