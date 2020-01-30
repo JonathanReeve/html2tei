@@ -3,7 +3,7 @@
 module Pandoc where
 
 -- behead.hs
-import Text.Pandoc
+import Text.Pandoc (readMarkdown, writeMarkdown, Block(Header), Pandoc, Par)
 import Text.Pandoc.Walk (walk)
 
 behead :: Block -> Block
